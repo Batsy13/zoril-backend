@@ -2,33 +2,31 @@ import { Injectable } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 
-const fakeUsers = [
-  {
-    id: 1,
-    username: "Pedro",
-    password: "teste1234"
-  },
-  {
-    id: 2,
-    username: "Giovanna",
-    password: "teste1234"
-  },
-]
+import { UsersService } from '../users/users.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
 
-  constructor(private jwtService: JwtService) { }
+  constructor(
+    private jwtService: JwtService,
+    private usersService: UsersService
+  ) { }
 
-  validateUser({ username, password }: AuthPayloadDto) {
-    const findUser = fakeUsers.find((user) => user.username === username)
+  async validateUser({ username, password }: AuthPayloadDto) {
+    const findUser = await this.usersService.findOneByEmail(username);
+    if (!findUser) return null;
 
-    if (!findUser) return null
-
-    if (password === findUser.password) {
-      const { password, ...user } = findUser
-      return this.jwtService.sign(user)
+    const isMatch = await bcrypt.compare(password, findUser.password)
+    if (isMatch) {
+      const { password, ...user } = findUser;
+      return this.jwtService.sign({ ...user });
     }
+  }
+
+  async register(createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
   }
 
 }
