@@ -13,12 +13,12 @@ export class AuthController {
   @Post("/login")
   @UseGuards(LocalGuard)
   login(@Req() req: Request) {
-    return req.user
+    return this.authService.login(req.user);
   }
 
-  @Get("/status")
+  @Get("/whoami")
   @UseGuards(JwtAuthGuard)
-  status(@Req() req: Request) {
+  whoami(@Req() req: Request) {
     return req.user
   }
 

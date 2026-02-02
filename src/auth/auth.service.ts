@@ -14,15 +14,22 @@ export class AuthService {
     private usersService: UsersService
   ) { }
 
-  async validateUser({ username, password }: AuthPayloadDto) {
-    const findUser = await this.usersService.findOneByEmail(username);
+  async validateUser({ email, password }: AuthPayloadDto) {
+    const findUser = await this.usersService.findOneByEmail(email);
     if (!findUser) return null;
 
     const isMatch = await bcrypt.compare(password, findUser.password)
     if (isMatch) {
       const { password, ...user } = findUser;
-      return this.jwtService.sign({ ...user });
+      return user;
     }
+  }
+
+  async login(user: any) {
+    const payload = { email: user.email, sub: user.id };
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
   }
 
   async register(createUserDto: CreateUserDto) {
