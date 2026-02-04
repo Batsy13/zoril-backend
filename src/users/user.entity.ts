@@ -1,5 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { Task } from '../tasks/entities/task.entity';
+import { Comment } from '../tasks/entities/comment.entity';
 
 @Entity()
 export class User {
@@ -15,4 +17,10 @@ export class User {
   @Column()
   @Exclude()
   password: string;
+
+  @OneToMany(() => Task, (task) => task.responsible)
+  assignedTasks: Task[];
+
+  @OneToMany(() => Comment, (comment) => comment.author)
+  comments: Comment[];
 }
