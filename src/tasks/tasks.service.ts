@@ -6,6 +6,8 @@ import { Comment } from './entities/comment.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { User } from '../users/user.entity';
+import { Team } from '../teams/entities/team.entity';
+import { TasksGateway } from './tasks.gateway';
 
 @Injectable()
 export class TasksService {
@@ -16,6 +18,9 @@ export class TasksService {
     private commentsRepository: Repository<Comment>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Team)
+    private teamsRepository: Repository<Team>,
+    private tasksGateway: TasksGateway,
   ) { }
 
   async create(createTaskDto: CreateTaskDto, user: User) {
@@ -31,17 +36,32 @@ export class TasksService {
       }
     }
 
-    return this.tasksRepository.save(task);
+    if (createTaskDto.teamId) {
+      const team = await this.teamsRepository.findOne({ where: { id: createTaskDto.teamId } });
+      if (team) {
+        task.team = team;
+      }
+    }
+
+    const savedTask = await this.tasksRepository.save(task);
+    
+    const fullTask = await this.findOne(savedTask.id);
+    
+    if (fullTask.team) {
+      this.tasksGateway.serverEmitToTeam(fullTask.team.id, 'taskCreated', fullTask);
+    }
+
+    return savedTask;
   }
 
   findAll() {
-    return this.tasksRepository.find({ relations: ['responsible'] });
+    return this.tasksRepository.find({ relations: ['responsible', 'team'] });
   }
 
   async findOne(id: number) {
     const task = await this.tasksRepository.findOne({
       where: { id },
-      relations: ['responsible', 'comments', 'comments.author']
+      relations: ['responsible', 'comments', 'comments.author', 'team']
     });
     if (!task) throw new NotFoundException(`Task #${id} not found`);
     return task;
@@ -59,12 +79,25 @@ export class TasksService {
     }
 
     Object.assign(task, updateTaskDto);
-    return this.tasksRepository.save(task);
+    const updatedTask = await this.tasksRepository.save(task);
+
+    if (updatedTask.team) {
+      this.tasksGateway.serverEmitToTeam(updatedTask.team.id, 'taskUpdated', updatedTask);
+    }
+
+    return updatedTask;
   }
 
   async remove(id: number) {
     const task = await this.findOne(id);
-    return this.tasksRepository.remove(task);
+    const teamId = task.team?.id;
+    const removed = await this.tasksRepository.remove(task);
+    
+    if (teamId) {
+      this.tasksGateway.serverEmitToTeam(teamId, 'taskDeleted', { id });
+    }
+    
+    return removed;
   }
 
   async addComment(taskId: number, content: string, user: User) {
@@ -74,6 +107,12 @@ export class TasksService {
       task,
       author: user,
     });
-    return this.commentsRepository.save(comment);
+    const savedComment = await this.commentsRepository.save(comment);
+    
+    if (task.team) {
+        this.tasksGateway.serverEmitToTeam(task.team.id, 'commentAdded', { taskId, comment: savedComment });
+    }
+
+    return savedComment;
   }
 }

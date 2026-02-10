@@ -26,4 +26,7 @@ export class CreateTaskDto {
 
   @IsOptional()
   responsibleId?: number;
+
+  @IsOptional()
+  teamId?: number;
 }

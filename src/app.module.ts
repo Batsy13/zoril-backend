@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
+import { TeamsModule } from './teams/teams.module';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { TasksModule } from './tasks/tasks.module';
       }
     }),
     AuthModule,
-    TasksModule
+    TasksModule,
+    TeamsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

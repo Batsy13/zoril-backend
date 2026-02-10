@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../../users/user.entity';
 import { Comment } from './comment.entity';
+import { Team } from '../../teams/entities/team.entity';
 
 export enum TaskStatus {
   PENDING = 'PENDING',
@@ -41,4 +42,7 @@ export class Task {
 
   @OneToMany(() => Comment, (comment) => comment.task)
   comments: Comment[];
+
+  @ManyToOne(() => Team, (team) => team.tasks, { nullable: true })
+  team: Team;
 }
